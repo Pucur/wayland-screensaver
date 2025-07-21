@@ -1,5 +1,6 @@
 #!/bin/bash
 inhibit_active=false
+pkill swayidle
 xscreensaver --nosplash &
 echo "🚀Starting Screensaver"
 swayidle -w timeout 120 'xscreensaver-command -activate' timeout 900 'systemctl suspend' &
