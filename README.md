@@ -25,16 +25,19 @@ This script requires:
 
 ### 🧩 Dependencies
 
-**Arch / Manjaro:**
-
+# Arch / Manjaro (pacman)
 ```bash
-sudo pacman -S bash dbus swayidle xscreensaver
+sudo pacman -S xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-data xscreensaver-data-extra
 ```
-**Fedora:**
+# Fedora (dnf)
 ```bash
-sudo dnf install bash dbus-tools swayidle xscreensaver
+sudo dnf install xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra
 ```
-**Ubuntu / Debian**
+# CentOS / RHEL (yum)
 ```bash
-sudo apt install bash dbus-utils swayidle xscreensaver
+sudo yum install xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra
+```
+# Debian / Ubuntu (apt)
+```bash
+sudo apt install xscreensaver xscreensaver-data xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra
 ```
