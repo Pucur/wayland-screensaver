@@ -1,35 +1,38 @@
-🛑 Screensaver support for Wayland window manager 🎉
-This little Bash helper watches your system’s DBus for screen saver events — specifically, when something inhibits or un-inhibits the screen idle (like when you’re watching a video or doing a presentation).
+# Swayidle Inhibit Watcher 🚦
 
-What does it do? 🤔
-When it spots an Inhibit event 🔒, it pauses swayidle so your screen won’t dim or go to sleep.
+This handy little Bash script listens for screen saver inhibit events on Wayland and automatically stops or restarts `swayidle` accordingly.  
 
-When it spots an UnInhibit event 🔓, it restarts swayidle with your usual timers ⏰, letting your screen go idle and eventually suspend again.
+When something "inhibits" the screen (like a video player or presentation), the script stops `swayidle` to prevent your screen from locking or going to sleep. When the inhibition ends, it restarts `swayidle` with your preferred timeout settings.
 
-Why is this handy? ✨
-Sometimes apps want to keep your screen awake (think Netflix binge or important slides). This script makes sure your screen behaves nicely — no annoying blackouts while you’re focused, but it still respects your power-saving preferences once the action’s over.
+---
 
-Dependencies 📦
-Make sure these are installed on your system to run the script smoothly:
+## How it works
 
-Distribution	Packages to install
-Arch Linux	swayidle, dbus, xscreensaver
-Fedora (Wayland)	swayidle, dbus, xscreensaver
-Ubuntu (Wayland)	swayidle, dbus-user-session, xscreensaver
-Debian (Wayland)	swayidle, dbus-user-session, xscreensaver
+- Listens for `Inhibit` and `UnInhibit` signals on the DBus `org.freedesktop.ScreenSaver` interface  
+- On `Inhibit` → stops `swayidle` to keep your session active 🔒  
+- On `UnInhibit` → restarts `swayidle` with your custom timeout settings 🔓  
 
-You’ll also want to make sure bash is available (almost always installed by default).
+---
 
-How to use? 🚀
-Just run it in the background:
+## Dependencies & Setup ⚙️
 
-bash
-Copy
-Edit
-./inhibit-monitor.sh
-Make sure the script is executable:
+This script requires:
 
-bash
-Copy
-Edit
-chmod +x inhibit-monitor.sh
+- `bash`  
+- `dbus-monitor` (part of `dbus` package)  
+- `swayidle` (Wayland idle management tool)  
+- `xscreensaver-command` (for activating screensaver, optional)  
+
+### Install dependencies on popular Wayland-friendly Linux distros:
+
+**Arch / Manjaro:**
+
+```bash
+sudo pacman -S bash dbus swayidle xscreensaver
+```
+```bash
+sudo dnf install bash dbus-tools swayidle xscreensaver
+```
+```bash
+sudo apt install bash dbus-utils swayidle xscreensaver
+```
