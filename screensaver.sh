@@ -17,6 +17,7 @@ while read -r line; do
         if [ "$inhibit_active" = true ]; then
             inhibit_active=false
             echo "▶ Restarting swayidle..."
+            xscreensaver --nosplash > /dev/null 2>&1 &
             swayidle -w timeout 120 'xscreensaver-command -activate' timeout 900 'systemctl suspend' &
         fi
     fi
