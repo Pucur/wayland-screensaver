@@ -29,7 +29,7 @@ while true; do
     sleep 1
 done
 
-inhibit_active=false
+inhibits_active=0
 
 # Kill any existing swayidle processes quietly
 pkill swayidle 2>/dev/null
@@ -46,17 +46,21 @@ monitor_inhibit() {
     while read -r line; do
         # Detect when an inhibit request is received (e.g., screen saver or suspend is blocked)
         if echo "$line" | grep -q "member=Inhibit"; then
-            echo "🔒 Inhibit detected!"
-            if [ "$inhibit_active" = false ]; then
-                inhibit_active=true
+            inhibits_active=$((inhibits_active + 1))
+            echo "🔒 Inhibit detected! ($inhibits_active)"
+
+            # If this is the first inhibit, stop swayidle
+            if [ "$inhibits_active" = 1 ]; then
                 echo "⛔ Stopping swayidle..."
                 pkill swayidle
             fi
         # Detect when inhibit is removed (allowing screen saver and suspend again)
         elif echo "$line" | grep -q "member=UnInhibit"; then
-            echo "🔓 UnInhibit detected!"
-            if [ "$inhibit_active" = true ]; then
-                inhibit_active=false
+            inhibits_active=$((inhibits_active > 0 ? inhibits_active - 1 : 0))
+            echo "🔓 UnInhibit detected! ($inhibits_active)"
+
+            # Only when all inhibits are gone, restart swayidle
+            if [ "$inhibits_active" = 0 ]; then
                 echo "▶ Restarting swayidle..."
                 swayidle -w timeout 120 'xscreensaver-command -activate' timeout 900 'systemctl suspend' &
             fi
