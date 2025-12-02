@@ -42,6 +42,7 @@ start_swayidle() {
     fi
 
     if is_activity_running; then
+        pkill swayidle 2>/dev/null
         swayidle -w timeout 120 'xscreensaver-command -activate' &
     else
         swayidle -w timeout 120 'xscreensaver-command -activate' timeout 900 'systemctl suspend' &
