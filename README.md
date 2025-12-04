@@ -1,8 +1,12 @@
-# Swayidle Inhibit Watcher v1.1 🚦
+# Swayidle Inhibit Watcher v1.2b 🚦
 
 This handy little Bash script listens for screen saver inhibit events on Wayland and automatically stops or restarts `swayidle` accordingly.  
 
 When something "inhibits" the screen (like a video player or presentation), the script stops `swayidle` to prevent your screen from locking or going to sleep. When the inhibition ends, it restarts `swayidle` with your preferred timeout settings.
+
+## Changelog
+v1.2b - The previouses version doesnt stopped/opened swayidle properly, now it seems OK but needs more time to test it out how its working in different cases.<br>
+Please test it out is it working for you properly, if not, open a new isssue to discuss it.
 
 ---
 
