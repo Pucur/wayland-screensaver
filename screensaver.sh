@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 
-export DISPLAY=:1
-export XAUTHORITY=$(find /run/user/$(id -u)/ -maxdepth 1 -name 'xauth_*' | head -n 1)
+while true; do
+    if pgrep -x xscreensaver > /dev/null; then
+        echo "✅ XScreenSaver is already running. Exiting wait loop."
+        break
+    fi
 
-# ==============================
-# Start XScreenSaver if not running
-# ==============================
-if ! pgrep -x xscreensaver > /dev/null; then
+    export DISPLAY=:1
+    export XAUTHORITY=$(find /run/user/$(id -u)/ -maxdepth 1 -name 'xauth_*' | head -n 1)
+
     DISPLAY=:1 xscreensaver -no-splash > /dev/null 2>&1 &
     sleep 1
-fi
 
-# Kill existing swayidle
+    if pgrep -x xscreensaver > /dev/null; then
+        echo "✅ XScreenSaver started successfully."
+        break
+    fi
+
+    echo "❌ Failed to start xscreensaver. Retrying in 1 second..."
+    sleep 1
+done
+
+# Kill existing swayidle and start it a fresh one
 pkill swayidle 2>/dev/null
+swayidle -w timeout 120 'xscreensaver-command -activate' timeout 900 'systemctl suspend' &
 
 # ==============================
 # VARIABLES
