@@ -1,4 +1,4 @@
-# Swayidle Inhibit Watcher v1.2b 🚦
+# Swayidle Inhibit Watcher v1.3 🚦
 
 This handy little Bash script listens for screen saver inhibit events on Wayland and automatically stops or restarts `swayidle` accordingly.  
 
@@ -52,3 +52,13 @@ sudo yum install xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-g
 ```bash
 sudo apt install xscreensaver xscreensaver-data xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra swayidle
 ```
+## Changelog 🔁
+- Version 1.3
+  More optimalised, better serial echoes.
+  Fixed the .xscreensaver file, that caused all the issue.
+- Version 1.2b
+  Added new changes maybe that fix the issue that the screensaver always came up when fullscreen stuff is in the background.
+- Version 1.1
+  Wanted to fix issues but still doesnt worked well.
+- Version 1.0
+The first script, barely untested, not optimalised.
