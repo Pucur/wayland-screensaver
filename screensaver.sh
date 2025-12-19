@@ -27,8 +27,6 @@ current_state="NONE"
 video_inhibit=false
 grace_start_time=0
 
-app_active=false
-app_block_grace=false
 initialized=0 # Run app search only once, set to 1 if you don't have any custom app
 
 echo "༄˖°.🍃.ೃ࿔*:･ Swayidle Inhibit Watcher v1.6 ~~ Created by Pucur - 2025.12.19 ~~ https://github.com/Pucur/wayland-screensaver ༄˖°.🍃.ೃ࿔*:･"
@@ -61,27 +59,14 @@ pkill -f swayidle 2>/dev/null
 # HELPERS
 # ==============================
 
-# Shared state across subshells (pipeline + background thread)
 STATE_DIR="/tmp/swayidle_inhibit_watcher_state"
 mkdir -p "$STATE_DIR"
 FLAG_APP_ACTIVE="$STATE_DIR/app_active"
 FLAG_APP_BLOCK_GRACE="$STATE_DIR/app_block_grace"
 
-flag_set() {
-    # $1=file $2=value
-    printf '%s' "$2" > "$1" 2>/dev/null
-}
+flag_set() { printf '%s' "$2" > "$1" 2>/dev/null; }
+flag_get() { [ -f "$1" ] && cat "$1" 2>/dev/null || printf '%s' "$2"; }
 
-flag_get() {
-    # $1=file $2=default
-    if [ -f "$1" ]; then
-        cat "$1" 2>/dev/null
-    else
-        printf '%s' "$2"
-    fi
-}
-
-# Initialize flags once (safe even if multiple instances; last writer wins)
 flag_set "$FLAG_APP_ACTIVE" "0"
 flag_set "$FLAG_APP_BLOCK_GRACE" "0"
 
@@ -97,13 +82,23 @@ is_game_or_app_active() {
     return 1
 }
 
+force_app_refresh() {
+    if pgrep -x "$app" >/dev/null 2>&1; then
+        flag_set "$FLAG_APP_ACTIVE" "1"
+        flag_set "$FLAG_APP_BLOCK_GRACE" "1"
+    else
+        flag_set "$FLAG_APP_ACTIVE" "0"
+        flag_set "$FLAG_APP_BLOCK_GRACE" "0"
+    fi
+}
+
 # ==============================
 # MODES
 # ==============================
 
 start_screensaver_mode() {
     kill_swayidle
-    stamp "🎮 Game running, starting screensaver without suspend"
+    stamp "🎮 Game / App running, starting screensaver without suspend"
     swayidle -w timeout "$screensavertime" 'xscreensaver-command -activate' >/dev/null 2>&1 &
     current_state="SCREENSAVER"
 }
@@ -118,7 +113,6 @@ start_full_idle_mode() {
 }
 
 start_grace() {
-    # Grace is HARD BLOCKED if app was active
     [ "$(flag_get "$FLAG_APP_BLOCK_GRACE" "0")" = "1" ] && return
     kill_swayidle
     grace_start_time=$(date +%s)
@@ -133,30 +127,21 @@ start_grace() {
 if [[ $initialized -eq 0 ]]; then
     initialized=1
     (
-        # Local cache only for logging (avoid spam)
-        last_app_active="0"
-
+        last="0"
         while true; do
-            now_app_active="0"
-            if pgrep -x "$app" >/dev/null 2>&1; then
-                now_app_active="1"
+            now="0"
+            pgrep -x "$app" >/dev/null 2>&1 && now="1"
+
+            flag_set "$FLAG_APP_ACTIVE" "$now"
+            flag_set "$FLAG_APP_BLOCK_GRACE" "$now"
+
+            if [ "$now" = "1" ] && [ "$last" != "1" ]; then
+                stamp "💻 App detected → inhibit suspend"
+            elif [ "$now" = "0" ] && [ "$last" != "0" ]; then
+                stamp "🏞️ App stopped → normal idle allowed"
             fi
 
-            if [ "$now_app_active" = "1" ]; then
-                flag_set "$FLAG_APP_ACTIVE" "1"
-                flag_set "$FLAG_APP_BLOCK_GRACE" "1"
-                if [ "$last_app_active" != "1" ]; then
-                    stamp "💻 App detected → inhibit suspend"
-                fi
-            else
-                flag_set "$FLAG_APP_ACTIVE" "0"
-                flag_set "$FLAG_APP_BLOCK_GRACE" "0"
-                if [ "$last_app_active" != "0" ]; then
-                    stamp "🏞️ App stopped → normal idle allowed"
-                fi
-            fi
-
-            last_app_active="$now_app_active"
+            last="$now"
             sleep "$apptime"
         done
     ) &
@@ -172,7 +157,6 @@ while true; do
     # --- POLLING ---
     if ! read -r -t 1 line; then
 
-        # VIDEO always wins
         if [ "$video_inhibit" = true ]; then
             kill_swayidle
             current_state="VIDEO"
@@ -180,7 +164,6 @@ while true; do
         fi
 
         case "$current_state" in
-
             NONE)
                 if is_game_or_app_active; then
                     start_screensaver_mode
@@ -188,7 +171,6 @@ while true; do
                     start_grace
                 fi
                 ;;
-
             GRACE)
                 if is_game_or_app_active; then
                     start_screensaver_mode
@@ -197,15 +179,9 @@ while true; do
                     start_full_idle_mode
                 fi
                 ;;
-
             SCREENSAVER)
-                # App running → stay here forever
-                # If app NOT running anymore, allow grace (but grace function itself is hard-blocked if app is active)
-                if ! is_game_or_app_active; then
-                    start_grace
-                fi
+                :
                 ;;
-
             FULL_IDLE)
                 if is_game_or_app_active; then
                     start_screensaver_mode
@@ -224,12 +200,12 @@ while true; do
             kill_swayidle
             current_state="VIDEO"
         fi
-
     elif [[ "$line" =~ member=UnInhibit ]]; then
         read -r nextline
         if ! [[ "$nextline" =~ GameMode ]]; then
             video_inhibit=false
             stamp "✅ VIDEO stopped"
+            force_app_refresh
             kill_swayidle
             current_state="NONE"
         fi
