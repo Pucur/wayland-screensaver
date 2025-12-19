@@ -204,7 +204,7 @@ while true; do
         read -r nextline
         if ! [[ "$nextline" =~ GameMode ]]; then
             video_inhibit=false
-            stamp "✅ VIDEO stopped"
+            stamp "✅ VIDEO or APP stopped"
             force_app_refresh
             kill_swayidle
             current_state="NONE"
