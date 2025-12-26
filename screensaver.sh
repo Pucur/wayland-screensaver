@@ -15,7 +15,6 @@
 app=tixati # Put your custom app name here or leave it empty
 suspendtime=900 # Start suspend in seconds
 screensavertime=120 # Start screensaver in seconds
-grace_time=5 # Minimum 5 seconds recommended
 apptime=60 # Suggest to set it to half than the screensaver time
 displaynumber=1 # Your display number (to get what display you using, type echo $DISPLAY in terminal)
 
@@ -25,11 +24,15 @@ displaynumber=1 # Your display number (to get what display you using, type echo 
 
 current_state="NONE"
 video_inhibit=false
-grace_start_time=0
+last_uninhibit_time=0
+
+pending_uninhibit=false
+pending_uninhibit_time=0
+uninhibit_confirm=10
 
 initialized=0 # Run app search only once, set to 1 if you don't have any custom app
 
-echo "༄˖°.🍃.ೃ࿔*:･ Swayidle Inhibit Watcher v1.6 ~~ Created by Pucur - 2025.12.19 ~~ https://github.com/Pucur/wayland-screensaver ༄˖°.🍃.ೃ࿔*:･"
+echo "༄˖°.🍃.ೃ࿔*:･ Swayidle Inhibit Watcher v1.7 ~~ Created by Pucur - 2025.12.26 ~~ https://github.com/Pucur/wayland-screensaver ༄˖°.🍃.ೃ࿔*:･"
 
 stamp() {
     echo "[$(date '+%H:%M:%S')] $*"
@@ -39,9 +42,10 @@ stamp() {
 # XScreenSaver
 # ==============================
 
+start_screensaver() {
 while true; do
     if pgrep -x xscreensaver >/dev/null 2>&1; then
-        stamp "✅ XScreenSaver is already running."
+        stamp "🖼️ XScreenSaver is already running."
         break
     fi
 
@@ -53,6 +57,8 @@ while true; do
     sleep 1
 done
 
+}
+
 pkill -f swayidle 2>/dev/null
 
 # ==============================
@@ -62,15 +68,14 @@ pkill -f swayidle 2>/dev/null
 STATE_DIR="/tmp/swayidle_inhibit_watcher_state"
 mkdir -p "$STATE_DIR"
 FLAG_APP_ACTIVE="$STATE_DIR/app_active"
-FLAG_APP_BLOCK_GRACE="$STATE_DIR/app_block_grace"
 
 flag_set() { printf '%s' "$2" > "$1" 2>/dev/null; }
 flag_get() { [ -f "$1" ] && cat "$1" 2>/dev/null || printf '%s' "$2"; }
 
 flag_set "$FLAG_APP_ACTIVE" "0"
-flag_set "$FLAG_APP_BLOCK_GRACE" "0"
 
 kill_swayidle() {
+    pkill -f xscreensaver
     pkill -f swayidle 2>/dev/null
 }
 
@@ -85,10 +90,8 @@ is_game_or_app_active() {
 force_app_refresh() {
     if pgrep -x "$app" >/dev/null 2>&1; then
         flag_set "$FLAG_APP_ACTIVE" "1"
-        flag_set "$FLAG_APP_BLOCK_GRACE" "1"
     else
         flag_set "$FLAG_APP_ACTIVE" "0"
-        flag_set "$FLAG_APP_BLOCK_GRACE" "0"
     fi
 }
 
@@ -98,6 +101,7 @@ force_app_refresh() {
 
 start_screensaver_mode() {
     kill_swayidle
+    start_screensaver
     stamp "🎮 Game / App running, starting screensaver without suspend"
     swayidle -w timeout "$screensavertime" 'xscreensaver-command -activate' >/dev/null 2>&1 &
     current_state="SCREENSAVER"
@@ -105,19 +109,12 @@ start_screensaver_mode() {
 
 start_full_idle_mode() {
     kill_swayidle
+    start_screensaver
     stamp "🏞️ No inhibit, normal idle with suspend"
     swayidle -w \
         timeout "$screensavertime" 'xscreensaver-command -activate' \
-        timeout "$suspendtime" 'systemctl suspend' >/dev/null 2>&1 &
+        timeout "$suspendtime" 'systemctl suspend' >/dev/null 2>&1 & # >/dev/null 2>&1 &
     current_state="FULL_IDLE"
-}
-
-start_grace() {
-    [ "$(flag_get "$FLAG_APP_BLOCK_GRACE" "0")" = "1" ] && return
-    kill_swayidle
-    grace_start_time=$(date +%s)
-    stamp "⏳ Grace START (${grace_time}s)"
-    current_state="GRACE"
 }
 
 # ==============================
@@ -133,7 +130,6 @@ if [[ $initialized -eq 0 ]]; then
             pgrep -x "$app" >/dev/null 2>&1 && now="1"
 
             flag_set "$FLAG_APP_ACTIVE" "$now"
-            flag_set "$FLAG_APP_BLOCK_GRACE" "$now"
 
             if [ "$now" = "1" ] && [ "$last" != "1" ]; then
                 stamp "💻 App detected → inhibit suspend"
@@ -151,43 +147,39 @@ fi
 # MAIN LOOP
 # ==============================
 
+start_full_idle_mode
+
 dbus-monitor --session "interface='org.freedesktop.ScreenSaver'" |
 while true; do
 
     # --- POLLING ---
     if ! read -r -t 1 line; then
 
+        if [ "$pending_uninhibit" = true ]; then
+            if [ $(( $(date +%s) - pending_uninhibit_time )) -ge $uninhibit_confirm ]; then
+                pending_uninhibit=false
+                video_inhibit=false
+            fi
+        fi
+
         if [ "$video_inhibit" = true ]; then
-            kill_swayidle
-            current_state="VIDEO"
+            if [ "$current_state" != "VIDEO" ]; then
+                kill_swayidle
+                current_state="VIDEO"
+            fi
             continue
         fi
 
-        case "$current_state" in
-            NONE)
-                if is_game_or_app_active; then
-                    start_screensaver_mode
-                else
-                    start_grace
-                fi
-                ;;
-            GRACE)
-                if is_game_or_app_active; then
-                    start_screensaver_mode
-                elif [ $(( $(date +%s) - grace_start_time )) -ge $grace_time ]; then
-                    stamp "✅ Grace DONE"
-                    start_full_idle_mode
-                fi
-                ;;
-            SCREENSAVER)
-                :
-                ;;
-            FULL_IDLE)
-                if is_game_or_app_active; then
-                    start_screensaver_mode
-                fi
-                ;;
-        esac
+        if is_game_or_app_active; then
+            if [ "$current_state" != "SCREENSAVER" ]; then
+                start_screensaver_mode
+            fi
+        else
+            if [ "$current_state" != "FULL_IDLE" ]; then
+                start_full_idle_mode
+            fi
+        fi
+
         continue
     fi
 
@@ -195,6 +187,7 @@ while true; do
     if [[ "$line" =~ member=Inhibit ]]; then
         read -r nextline
         if ! [[ "$nextline" =~ GameMode ]]; then
+            pending_uninhibit=false
             video_inhibit=true
             stamp "📺 VIDEO detected"
             kill_swayidle
@@ -203,11 +196,11 @@ while true; do
     elif [[ "$line" =~ member=UnInhibit ]]; then
         read -r nextline
         if ! [[ "$nextline" =~ GameMode ]]; then
-            video_inhibit=false
-            stamp "✅ VIDEO or APP stopped"
+            pending_uninhibit=true
+            pending_uninhibit_time=$(date +%s)
+            last_uninhibit_time=$(date +%s)
+            stamp "⏹️ VIDEO or APP stopped"
             force_app_refresh
-            kill_swayidle
-            current_state="NONE"
         fi
     fi
 done
