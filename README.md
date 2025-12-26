@@ -1,4 +1,4 @@
-# Wayland Swayidle Inhibit Watcher v1.6 🚦
+# Wayland Swayidle Inhibit Watcher v1.7 🚦
 
 This handy little Bash script listens for screen saver inhibit events on Wayland and automatically stops or restarts `swayidle` accordingly.  
 
@@ -31,7 +31,6 @@ If you do find any bugs, feel free to report them in the Issues section!
 - On `Inhibit` from GameMode (`com.feralinteractive.GameMode`) → only screensaver runs, suspend disabled 🎮
 - On `Inhibit` from any other application (e.g., YouTube in Chromium, VLC) → swayidle fully stopped (if its on the Top screen not in the tray) 💻
 - On `UnInhibit` → restarts `swayidle` with the correct mode 🔓
-- The Grace Time is a short, configurable delay period that prevents immediate screen locking or system suspend after certain state changes (such as stopping video playback or exiting an application). ⏳
 - Monitors Custom apps and GameMode activity continuously 📊
 - If custom apps or GameMode running → only screensaver mode 📦
 - If neither running and no other inhibit → full mode (screensaver + suspend) 🏞️
@@ -68,6 +67,7 @@ sudo yum install xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-g
 sudo apt install xscreensaver xscreensaver-data xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra swayidle
 ```
 ## Changelog 🔁
+- Version 1.7 So I figured it out (again), that only killing the swayidle is not enough, it needs also the Xscreensaver to be killed, because other X11 apps (even if you using wayland), can call its API. Also the grace timer is removed because it was unneccesarry, not that caused the issue.
 - Version 1.6 Added Grace time for the script, checking if the process really running, killing swayidle process when inhibit activated
 - Version 1.5 Brand new app as I can say, I learend a much about swayidle, now the code is simplier, faster, stronger, better. Added more easier variables to set up, more transparent than before.
 - Version 1.3
