@@ -1,10 +1,10 @@
-# Wayland Swayidle Inhibit Watcher v1.7 🚦
+# Wayland Swayidle Inhibit Watcher v1.8 🚦
 
 This handy little Bash script listens for screen saver inhibit events on Wayland and automatically stops or restarts `swayidle` accordingly.  
 
 When something "inhibits" the screen (like a video player or presentation), the script stops `swayidle` to prevent your screen from locking or going to sleep. When the inhibition ends, it restarts `swayidle` with your preferred timeout settings.
 
-Tested on `Arch Linux 6.17.9-arch1-1 ~~ KDE Plasma 6.5.4 kwin`
+Tested on `Arch Linux 7.2.11-arch1-1 ~~ KDE Plasma 6.8.1 kwin`
 
 # Notes on Swayidle behavior
 
@@ -67,6 +67,7 @@ sudo yum install xscreensaver xscreensaver-extras xscreensaver-gl xscreensaver-g
 sudo apt install xscreensaver xscreensaver-data xscreensaver-gl xscreensaver-gl-extra xscreensaver-data-extra swayidle
 ```
 ## Changelog 🔁
+- Version 1.8 In the autostart, for some reason, doesn't get the correct wayland environment display ID. So now, the app waits until it finds out, then start the other processes.
 - Version 1.7 So I figured it out (again), that only killing the swayidle is not enough, it needs also the Xscreensaver to be killed, because other X11 apps (even if you using wayland), can call its API. Also the grace timer is removed because it was unneccesarry, not that caused the issue.
 - Version 1.6 Added Grace time for the script, checking if the process really running, killing swayidle process when inhibit activated
 - Version 1.5 Brand new app as I can say, I learend a much about swayidle, now the code is simplier, faster, stronger, better. Added more easier variables to set up, more transparent than before.
