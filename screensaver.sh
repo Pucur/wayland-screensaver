@@ -32,11 +32,34 @@ uninhibit_confirm=10
 
 initialized=0 # Run app search only once, set to 1 if you don't have any custom app
 
-echo "༄˖°.🍃.ೃ࿔*:･ Swayidle Inhibit Watcher v1.7 ~~ Created by Pucur - 2025.12.26 ~~ https://github.com/Pucur/wayland-screensaver ༄˖°.🍃.ೃ࿔*:･"
+
+
+echo "༄˖°.🍃.ೃ࿔*:･ Swayidle Inhibit Watcher v1.8 ~~ Created by Pucur - 2026.10.25 ~~ https://github.com/Pucur/wayland-screensaver ༄˖°.🍃.ೃ࿔*:･"
+
 
 stamp() {
     echo "[$(date '+%H:%M:%S')] $*"
 }
+
+# ==============================
+# WAYLAND ENVIRONMENT WAIT
+# ==============================
+
+while [ -z "$WAYLAND_DISPLAY" ]; do
+    if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
+        export WAYLAND_DISPLAY="wayland-0"
+    else
+        found_socket=$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name "wayland-*" -print -quit 2>/dev/null)
+        if [ -n "$found_socket" ]; then
+            export WAYLAND_DISPLAY=$(basename "$found_socket")
+        else
+            sleep 1
+            continue
+        fi
+    fi
+done
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 # ==============================
 # XScreenSaver
@@ -113,7 +136,7 @@ start_full_idle_mode() {
     stamp "🏞️ No inhibit, normal idle with suspend"
     swayidle -w \
         timeout "$screensavertime" 'xscreensaver-command -activate' \
-        timeout "$suspendtime" 'systemctl suspend' >/dev/null 2>&1 & # >/dev/null 2>&1 &
+        timeout "$suspendtime" 'systemctl suspend' >/dev/null 2>&1 &
     current_state="FULL_IDLE"
 }
 
